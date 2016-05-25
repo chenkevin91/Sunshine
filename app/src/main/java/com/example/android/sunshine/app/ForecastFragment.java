@@ -53,7 +53,7 @@ public class ForecastFragment extends Fragment {
 
         //noinspection SimplifiableIfStatement
         if (id == R.id.action_refresh) {
-            new FetchWeatherTask().execute();
+            new FetchWeatherTask().execute("02210");
             return true;
         }
 
@@ -90,12 +90,12 @@ public class ForecastFragment extends Fragment {
         return rootView;
     }
 
-    public class FetchWeatherTask extends AsyncTask<Integer, Void, Void> {
+    public class FetchWeatherTask extends AsyncTask<String, Void, Void> {
 
         private final String LOG_TAG = FetchWeatherTask.class.getSimpleName();
 
         @Override
-        protected Void doInBackground(Integer... zipCode) {
+        protected Void doInBackground(String... params) {
             // These two need to be declared outside the try/catch
             // so that they can be closed in the finally block.
             HttpURLConnection urlConnection = null;
@@ -104,15 +104,21 @@ public class ForecastFragment extends Fragment {
             // Will contain the raw JSON response as a string.
             String forecastJsonStr = null;
 
+
+            String units = "metric";
+            String mode = "json";
+            int numDays = 7;
+            final String urlApiKey = "08c551f27fdb86dc25fb808a092e8aa8";
+
             try {
                 // Construct the URL for the OpenWeatherMap query
                 // Possible parameters are avaiable at OWM's forecast API page, at
                 // http://openweathermap.org/API#forecast
-                String urlZip = "";
-                String urlUnits = "";
-                String urlMode = "";
-                String urlCount = "";
-                String urlApiKey = "08c551f27fdb86dc25fb808a092e8aa8";
+                final String ZIP_PARAM = "zip";
+                final String UNIT_PARAM = "units";
+                final String MODE_PARAM = "mode";
+                final String DAYS_PARAM = "cnt";
+                final String APPID_PARAM = "appid";
 
                 Uri.Builder builder = new Uri.Builder();
                 builder.scheme("http")
@@ -121,11 +127,11 @@ public class ForecastFragment extends Fragment {
                         .appendPath("2.5")
                         .appendPath("forecast")
                         .appendPath("daily")
-                        .appendQueryParameter("zip", "02119")
-                        .appendQueryParameter("units", "metric")
-                        .appendQueryParameter("mode", "json")
-                        .appendQueryParameter("cnt", "7")
-                        .appendQueryParameter("appid", urlApiKey);
+                        .appendQueryParameter(ZIP_PARAM, params[0])
+                        .appendQueryParameter(UNIT_PARAM, units)
+                        .appendQueryParameter(MODE_PARAM, mode)
+                        .appendQueryParameter(DAYS_PARAM, Integer.toString(numDays))
+                        .appendQueryParameter(APPID_PARAM, urlApiKey);
                 URL url = new URL(builder.build().toString());
                 Log.d(LOG_TAG, "url = " +url);
 
