@@ -14,15 +14,22 @@ import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.List;
+import java.util.TimeZone;
 
 /**
  * Created by kchen on 5/24/16.
@@ -104,7 +111,6 @@ public class ForecastFragment extends Fragment {
             // Will contain the raw JSON response as a string.
             String forecastJsonStr = null;
 
-
             String units = "metric";
             String mode = "json";
             int numDays = 7;
@@ -133,7 +139,7 @@ public class ForecastFragment extends Fragment {
                         .appendQueryParameter(DAYS_PARAM, Integer.toString(numDays))
                         .appendQueryParameter(APPID_PARAM, urlApiKey);
                 URL url = new URL(builder.build().toString());
-                Log.d(LOG_TAG, "url = " +url);
+                Log.d(LOG_TAG, "url = " + url);
 
 
                 // Create the request to OpenWeatherMap, and open the connection
@@ -165,6 +171,7 @@ public class ForecastFragment extends Fragment {
                 forecastJsonStr = buffer.toString();
 
                 Log.d(LOG_TAG, "Forecast JSON String:" + forecastJsonStr);
+                Log.d("time test", "1464278400: " + getReadableDateString(1464278400));
 
             } catch (IOException e) {
                 Log.e(LOG_TAG, "Error ", e);
@@ -187,6 +194,62 @@ public class ForecastFragment extends Fragment {
         }
     }
 
+
+    /* The date/time conversion code is going to be moved outside the asynctask later,
+     * so for convenience we're breaking it out into its own method now.
+     */
+    // TODO: getReadableDateString
+    private String getReadableDateString(long time){
+        Date date = new Date(time*1000L);
+        SimpleDateFormat sdf = new SimpleDateFormat("EEE, - MMM dd");
+        String formattedDate = sdf.format(date);
+
+        return formattedDate;
+    }
+
+
+    /**
+     * Prepare the weather high/lows for presentation.
+     */
+    // TODO: formatHighLows
+    private String formatHighLows(double high, double low) {
+        String highString = Long.toString(Math.round(high));
+        String lowString = Long.toString(Math.round(low));
+
+        return highString+"/"+lowString;
+    }
+
+    /**
+     * Take the String representing the complete forecast in JSON Format and
+     * pull out the data we need to construct the Strings needed for the wireframes.
+     *
+     * Fortunately parsing is easy:  constructor takes the JSON string and converts it
+     * into an Object hierarchy for us.
+     */
+    // TODO: getWeatherDataFromJson
+    //Example: "Mon, Jun 1 - Clear - 18/13"
+    private String[] getWeatherDataFromJson(String weatherJsonStr, int numDays)
+            throws JSONException {
+        String[] weatherData = new String[numDays];
+
+        JSONObject weatherJ = new JSONObject(weatherJsonStr);
+        JSONArray week = weatherJ.getJSONArray("list");
+        for(int i=0; i<week.length(); i++){
+            JSONObject day = week.getJSONObject(i);
+            long time = day.getLong("dt");
+            String formattedDate = getReadableDateString(time);
+
+            JSONObject temps = day.getJSONObject("temp");
+            String formattedTemps = formatHighLows(temps.getDouble("max"), temps.getDouble("min"));
+
+            JSONObject weather = day.getJSONObject("weather");
+            String weatherMain = weather.getString("main");
+
+            weatherData[i] = formattedDate + " - " + weatherMain + " - " + formattedTemps;
+        }
+
+        return weatherData;
+    }
 
 
 }
