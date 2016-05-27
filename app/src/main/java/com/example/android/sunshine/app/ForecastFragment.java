@@ -97,12 +97,12 @@ public class ForecastFragment extends Fragment {
         return rootView;
     }
 
-    public class FetchWeatherTask extends AsyncTask<String, Void, Void> {
+    public class FetchWeatherTask extends AsyncTask<String, Void, String[]> {
 
         private final String LOG_TAG = FetchWeatherTask.class.getSimpleName();
 
         @Override
-        protected Void doInBackground(String... params) {
+        protected String[] doInBackground(String... params) {
             // These two need to be declared outside the try/catch
             // so that they can be closed in the finally block.
             HttpURLConnection urlConnection = null;
@@ -116,16 +116,16 @@ public class ForecastFragment extends Fragment {
             int numDays = 7;
             final String urlApiKey = "08c551f27fdb86dc25fb808a092e8aa8";
 
+            final String ZIP_PARAM = "zip";
+            final String UNIT_PARAM = "units";
+            final String MODE_PARAM = "mode";
+            final String DAYS_PARAM = "cnt";
+            final String APPID_PARAM = "appid";
+
             try {
                 // Construct the URL for the OpenWeatherMap query
                 // Possible parameters are avaiable at OWM's forecast API page, at
                 // http://openweathermap.org/API#forecast
-                final String ZIP_PARAM = "zip";
-                final String UNIT_PARAM = "units";
-                final String MODE_PARAM = "mode";
-                final String DAYS_PARAM = "cnt";
-                final String APPID_PARAM = "appid";
-
                 Uri.Builder builder = new Uri.Builder();
                 builder.scheme("http")
                         .authority("api.openweathermap.org")
@@ -137,7 +137,7 @@ public class ForecastFragment extends Fragment {
                         .appendQueryParameter(UNIT_PARAM, units)
                         .appendQueryParameter(MODE_PARAM, mode)
                         .appendQueryParameter(DAYS_PARAM, Integer.toString(numDays))
-                        .appendQueryParameter(APPID_PARAM, urlApiKey);
+                        .appendQueryParameter(APPID_PARAM, BuildConfig.OPEN_WEATHER_MAP_API_KEY);
                 URL url = new URL(builder.build().toString());
                 Log.d(LOG_TAG, "url = " + url);
 
@@ -173,6 +173,7 @@ public class ForecastFragment extends Fragment {
                 Log.d(LOG_TAG, "Forecast JSON String:" + forecastJsonStr);
                 Log.d("time test", "1464278400: " + getReadableDateString(1464278400));
 
+
             } catch (IOException e) {
                 Log.e(LOG_TAG, "Error ", e);
                 // If the code didn't successfully get the weather data, there's no point in attemping
@@ -190,6 +191,15 @@ public class ForecastFragment extends Fragment {
                     }
                 }
             }
+
+            try {
+                Log.d("parser test", getWeatherDataFromJson(forecastJsonStr, numDays)[0]);
+                return getWeatherDataFromJson(forecastJsonStr, numDays);
+            } catch (JSONException j) {
+                Log.e(LOG_TAG, "JSON Error ", j);
+            }
+
+            // This will only happen if there was an error getting or parsing the forecast.
             return null;
         }
     }
@@ -198,10 +208,9 @@ public class ForecastFragment extends Fragment {
     /* The date/time conversion code is going to be moved outside the asynctask later,
      * so for convenience we're breaking it out into its own method now.
      */
-    // TODO: getReadableDateString
-    private String getReadableDateString(long time){
-        Date date = new Date(time*1000L);
-        SimpleDateFormat sdf = new SimpleDateFormat("EEE, - MMM dd");
+    private String getReadableDateString(long time) {
+        Date date = new Date(time * 1000L);
+        SimpleDateFormat sdf = new SimpleDateFormat("EEE, MMM dd");
         String formattedDate = sdf.format(date);
 
         return formattedDate;
@@ -211,39 +220,50 @@ public class ForecastFragment extends Fragment {
     /**
      * Prepare the weather high/lows for presentation.
      */
-    // TODO: formatHighLows
     private String formatHighLows(double high, double low) {
         String highString = Long.toString(Math.round(high));
         String lowString = Long.toString(Math.round(low));
 
-        return highString+"/"+lowString;
+        return highString + "/" + lowString;
     }
 
     /**
      * Take the String representing the complete forecast in JSON Format and
      * pull out the data we need to construct the Strings needed for the wireframes.
-     *
+     * <p/>
      * Fortunately parsing is easy:  constructor takes the JSON string and converts it
      * into an Object hierarchy for us.
+     * <p/>
+     * Example: "Mon, Jun 1 - Clear - 18/13"
      */
-    // TODO: getWeatherDataFromJson
-    //Example: "Mon, Jun 1 - Clear - 18/13"
+
     private String[] getWeatherDataFromJson(String weatherJsonStr, int numDays)
             throws JSONException {
+
+        // These are the names of the JSON objects that need to be extracted.
+        final String OWM_LIST = "list";
+        final String OWM_DATE = "dt";
+        final String OWM_WEATHER = "weather";
+        final String OWM_TEMPERATURE = "temp";
+        final String OWM_MAX = "max";
+        final String OWM_MIN = "min";
+        final String OWM_DESCRIPTION = "main";
+
+
         String[] weatherData = new String[numDays];
 
         JSONObject weatherJ = new JSONObject(weatherJsonStr);
-        JSONArray week = weatherJ.getJSONArray("list");
-        for(int i=0; i<week.length(); i++){
+        JSONArray week = weatherJ.getJSONArray(OWM_LIST);
+        for (int i = 0; i < week.length(); i++) {
             JSONObject day = week.getJSONObject(i);
-            long time = day.getLong("dt");
+            long time = day.getLong(OWM_DATE);
             String formattedDate = getReadableDateString(time);
 
-            JSONObject temps = day.getJSONObject("temp");
-            String formattedTemps = formatHighLows(temps.getDouble("max"), temps.getDouble("min"));
+            JSONObject temps = day.getJSONObject(OWM_TEMPERATURE);
+            String formattedTemps = formatHighLows(temps.getDouble(OWM_MAX), temps.getDouble(OWM_MIN));
 
-            JSONObject weather = day.getJSONObject("weather");
-            String weatherMain = weather.getString("main");
+            JSONObject weather = day.getJSONArray(OWM_WEATHER).getJSONObject(0);
+            String weatherMain = weather.getString(OWM_DESCRIPTION);
 
             weatherData[i] = formattedDate + " - " + weatherMain + " - " + formattedTemps;
         }
