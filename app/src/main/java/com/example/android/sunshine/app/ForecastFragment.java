@@ -35,6 +35,7 @@ import java.util.TimeZone;
  * Created by kchen on 5/24/16.
  */
 public class ForecastFragment extends Fragment {
+    ArrayAdapter<String> mForecastAdapter;
 
     public ForecastFragment() {
     }
@@ -85,7 +86,7 @@ public class ForecastFragment extends Fragment {
 
         List<String> weekForecast = new ArrayList<String>(Arrays.asList(forecastArray));
 
-        ArrayAdapter<String> mForecastAdapter = new ArrayAdapter<String>(
+        mForecastAdapter = new ArrayAdapter<String>(
                 getActivity(),
                 R.layout.list_item_forecast,
                 R.id.list_item_forecast_textview,
@@ -139,7 +140,6 @@ public class ForecastFragment extends Fragment {
                         .appendQueryParameter(DAYS_PARAM, Integer.toString(numDays))
                         .appendQueryParameter(APPID_PARAM, BuildConfig.OPEN_WEATHER_MAP_API_KEY);
                 URL url = new URL(builder.build().toString());
-                Log.d(LOG_TAG, "url = " + url);
 
 
                 // Create the request to OpenWeatherMap, and open the connection
@@ -169,11 +169,6 @@ public class ForecastFragment extends Fragment {
                     return null;
                 }
                 forecastJsonStr = buffer.toString();
-
-                Log.d(LOG_TAG, "Forecast JSON String:" + forecastJsonStr);
-                Log.d("time test", "1464278400: " + getReadableDateString(1464278400));
-
-
             } catch (IOException e) {
                 Log.e(LOG_TAG, "Error ", e);
                 // If the code didn't successfully get the weather data, there's no point in attemping
@@ -193,7 +188,6 @@ public class ForecastFragment extends Fragment {
             }
 
             try {
-                Log.d("parser test", getWeatherDataFromJson(forecastJsonStr, numDays)[0]);
                 return getWeatherDataFromJson(forecastJsonStr, numDays);
             } catch (JSONException j) {
                 Log.e(LOG_TAG, "JSON Error ", j);
@@ -201,6 +195,16 @@ public class ForecastFragment extends Fragment {
 
             // This will only happen if there was an error getting or parsing the forecast.
             return null;
+        }
+
+        @Override
+        protected void onPostExecute(String[] results) {
+            if (results != null){
+                mForecastAdapter.clear();
+                for (int i = 0; i < results.length; i++) {
+                    mForecastAdapter.add(results[i]);
+                }
+            }
         }
     }
 
@@ -230,10 +234,10 @@ public class ForecastFragment extends Fragment {
     /**
      * Take the String representing the complete forecast in JSON Format and
      * pull out the data we need to construct the Strings needed for the wireframes.
-     * <p/>
+     *
      * Fortunately parsing is easy:  constructor takes the JSON string and converts it
      * into an Object hierarchy for us.
-     * <p/>
+     *
      * Example: "Mon, Jun 1 - Clear - 18/13"
      */
 
