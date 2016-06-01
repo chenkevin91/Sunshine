@@ -1,5 +1,7 @@
 package com.example.android.sunshine.app;
 
+import android.content.Context;
+import android.content.Intent;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -11,8 +13,10 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
+import android.widget.Toast;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -73,8 +77,7 @@ public class ForecastFragment extends Fragment {
                              Bundle savedInstanceState) {
         View rootView = inflater.inflate(R.layout.fragment_main, container, false);
 
-
-        String[] forecastArray = {
+        final String[] forecastArray = {
                 "Today - Sunny - 88/63",
                 "Tomorrow - Foggy - 70/40",
                 "Weds - Cloudy - 72/63",
@@ -95,6 +98,20 @@ public class ForecastFragment extends Fragment {
         ListView listViewForecast = (ListView) rootView.findViewById(R.id.listview_forecast);
         listViewForecast.setAdapter(mForecastAdapter);
 
+        listViewForecast.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+//                Context context = getActivity();
+//                CharSequence text = "Hello toast! " + mForecastAdapter.getItem(position);
+//                int duration = Toast.LENGTH_SHORT;
+//
+//                Toast.makeText(context, text, duration).show();
+                Intent detailIntent = new Intent(getActivity(), DetailActivity.class)
+                        .putExtra(Intent.EXTRA_TEXT, mForecastAdapter.getItem(position));
+                startActivity(detailIntent);
+            }
+        });
+
         return rootView;
     }
 
@@ -112,10 +129,9 @@ public class ForecastFragment extends Fragment {
             // Will contain the raw JSON response as a string.
             String forecastJsonStr = null;
 
-            String units = "metric";
-            String mode = "json";
+            String units = "imperial"; //options: imperial, metric
+            String mode = "json";  //options: json, xml, html
             int numDays = 7;
-            final String urlApiKey = "08c551f27fdb86dc25fb808a092e8aa8";
 
             final String ZIP_PARAM = "zip";
             final String UNIT_PARAM = "units";
